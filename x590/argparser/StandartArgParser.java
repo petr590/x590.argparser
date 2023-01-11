@@ -1,17 +1,20 @@
-package argparser;
+package x590.argparser;
+
+import static x590.argparser.Argument.PREFIX;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static argparser.Argument.PREFIX;
+import x590.util.annotation.Nullable;
 
 /**
  * Стандартный парсер. Изначально содержит флаги --help
@@ -22,10 +25,17 @@ public class StandartArgParser implements ArgParser {
 	public static final String INDENT = "  ";
 	
 	public final String programName;
+	
+	public static final Locale RU_LOCALE = Locale.forLanguageTag("ru-ru");
+	private @Nullable Locale locale;
+	
 	private int lineWidth = 40;
+	
 	private final Map<String, Argument<?>>
-			optionalArguments = new LinkedHashMap<>(),
-			positionalArguments = new LinkedHashMap<>();
+			optionalArguments = new HashMap<>(),
+			positionalArguments = new HashMap<>();
+	
+	private final Set<Argument<?>> options = new LinkedHashSet<>();
 	
 	private ErrorHandler errorHandler = ErrorHandlers.PRINT_AND_EXIT;
 	
@@ -34,21 +44,20 @@ public class StandartArgParser implements ArgParser {
 		this.programName = programName;
 		
 		Argument<?> helpFlag = new Flag("-h", "--help", "-?")
-				.replaceable().hideFromShortHelp().help("Show this help and exit")
+				.replaceable().hideFromShortHelp()
+						.help("Show this help and exit")
+						.help(RU_LOCALE, "Показать это сообщение")
 				
 				.action(namespace -> {
 					
-					Set<Argument<?>> options = new LinkedHashSet<>(positionalArguments.values());
-					options.addAll(optionalArguments.values());
-		
 					System.out.println("Usage: " + programName + " " +
 							options.stream().filter(argument -> !argument.hiddenFromShortHelp())
 								.map(argument -> argument.toString()).collect(Collectors.joining(" ")));
 					
 					System.out.println("Arguments:\n" +
 							options.stream().map(argument -> {
-								String helpMessage = argument.getHelpMessage();
-		
+								String helpMessage = argument.getHelpMessage(locale);
+								
 								if(helpMessage == null)
 									return "";
 								
@@ -70,13 +79,18 @@ public class StandartArgParser implements ArgParser {
 		optionalArguments.put("-h", helpFlag);
 		optionalArguments.put("--help", helpFlag);
 		optionalArguments.put("-?", helpFlag);
+		
+		options.add(helpFlag);
 	}
 	
 	public StandartArgParser(String programName, String version) {
 		this(programName);
 		
 		Argument<?> versionFlag = new Flag("-v", "--version")
-				.replaceable().hideFromShortHelp().help("Print version of the program and exit")
+				.replaceable().hideFromShortHelp()
+					.help("Print version of the program and exit")
+					.help(RU_LOCALE, "Вывести версию программы")
+				
 				.action(namespace -> {
 					System.out.println(programName + " " + version);
 					System.exit(0);
@@ -84,6 +98,8 @@ public class StandartArgParser implements ArgParser {
 		
 		optionalArguments.put("-v", versionFlag);
 		optionalArguments.put("--version", versionFlag);
+		
+		options.add(versionFlag);
 	}
 	
 	
@@ -91,6 +107,16 @@ public class StandartArgParser implements ArgParser {
 		return options.entrySet().stream().filter(
 				entry -> argument.names.stream().anyMatch(
 						name -> name.equals(entry.getKey()))).toList();
+	}
+	
+	
+	public StandartArgParser localize(Locale locale) {
+		this.locale = locale;
+		return this;
+	}
+	
+	public StandartArgParser localize() {
+		return localize(Locale.getDefault());
 	}
 	
 	
@@ -129,6 +155,8 @@ public class StandartArgParser implements ArgParser {
 		for(String name : argument.names) {
 			arguments.put(name, argument);
 		}
+		
+		options.add(argument);
 		
 		return this;
 	}
@@ -202,7 +230,7 @@ public class StandartArgParser implements ArgParser {
 					}
 					
 					((List<Object>)namespaceMap.get(name).getValue()).add(parsedValue);
-					argument.performAction(namespace);
+					((Argument<Object>)argument).performAction(namespace, parsedValue);
 				
 				} else {
 					errorHandler.handle(programName, "Unknown option '" + arg + "'", () -> new UnknownOptionException(arg));
@@ -210,9 +238,9 @@ public class StandartArgParser implements ArgParser {
 				}
 				
 				continue;
-			
+				
 			} else {
-				if(!positionalArgument.canParse()) {
+				if(positionalArgument == null || !positionalArgument.canParse()) {
 					if(!positionalIter.hasNext())
 						errorHandler.handle(programName, "Unrecognized argument '" + arg + "'", () -> new UnrecognizedArgumentException(arg));
 					
@@ -276,6 +304,7 @@ public class StandartArgParser implements ArgParser {
 			this.argument = argument;
 		}
 		
+		@Override
 		public boolean hasNext() {
 			if(argument == null)
 				return iterator.hasNext();
@@ -283,6 +312,7 @@ public class StandartArgParser implements ArgParser {
 			return true;
 		}
 		
+		@Override
 		public Argument<?> next() {
 			if(argument == null)
 				return iterator.next();

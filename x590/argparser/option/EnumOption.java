@@ -1,9 +1,9 @@
-package argparser.option;
+package x590.argparser.option;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-import argparser.ArgumentParseException;
+import x590.argparser.ArgumentParseException;
 
 public class EnumOption<E extends Enum<E>> extends Option<E> {
 	

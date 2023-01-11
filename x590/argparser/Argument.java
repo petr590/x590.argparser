@@ -1,11 +1,17 @@
-package argparser;
+package x590.argparser;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import x590.util.annotation.Nullable;
 
 /**
  * Описывает абстрактный аргумент.
@@ -18,7 +24,7 @@ public abstract class Argument<T> {
 	protected static final Pattern OPTION_NAME_PATTERN =
 			Pattern.compile("-?[^ (){}\\[\\]\\\\$<>=\"'`;]+");
 	
-	private static final Consumer<ArgsNamespace> NO_ACTION = namespace -> {};
+	private static final BiConsumer<ArgsNamespace, Object> NO_ACTION = (namespace, value) -> {};
 	
 	/** Основное имя аргумента */
 	protected String name;
@@ -42,17 +48,23 @@ public abstract class Argument<T> {
 	protected Times times;
 	
 	/** Сколько раз аргумент был распарсен */
-	int parsedTimes; // = 0
+	int parsedTimes;
 	
 	/** Сообщение, выводимое в help.
 	 * Если оно равно {@literal null}, аргумент не выводится. */
-	protected String helpMessage = "";
+	protected @Nullable String helpMessage = "";
+	
+	/** Локализованные сообщения в help */
+	protected @Nullable Map<Locale, String> helpMessages;
 	
 	/** Скрыт ли аргумент из короткого help */
 	protected boolean hiddenFromShortHelp;
 	
-	protected boolean replaceable; // = false
-	protected Consumer<ArgsNamespace> action = NO_ACTION;
+	/** Может ли другой аргумент с таким же именем заменить этот аргумент */
+	protected boolean replaceable;
+	
+	@SuppressWarnings("unchecked")
+	protected BiConsumer<ArgsNamespace, T> action = (BiConsumer<ArgsNamespace, T>)NO_ACTION;
 	protected Function<String, T> parser = this::parseValue;
 	
 	private void addName(String name) {
@@ -133,13 +145,21 @@ public abstract class Argument<T> {
 	}
 	
 	
-	/** Дайт возможность указывать несколько значений аргумента */
+	/** Даёт возможность указывать несколько значений аргумента */
 	public abstract Argument<T> multiargs();
 	
 	
 	/** Описание агрумента, которое показывается в help-е */
 	public Argument<T> help(String helpMessage) {
 		this.helpMessage = helpMessage;
+		return this;
+	}
+	
+	public Argument<T> help(Locale locale, String helpMessage) {
+		if(helpMessages == null)
+			helpMessages = new HashMap<>();
+			
+		this.helpMessages.put(locale, helpMessage);
 		return this;
 	}
 	
@@ -175,7 +195,14 @@ public abstract class Argument<T> {
 		return this;
 	}
 	
+	
 	public Argument<T> action(Consumer<ArgsNamespace> action) {
+		this.action = (namespace, value) -> action.accept(namespace);
+		return this;
+	}
+	
+	/** Функция, которая выполняется при парсинге аргумента */
+	public Argument<T> action(BiConsumer<ArgsNamespace, T> action) {
 		this.action = action;
 		return this;
 	}
@@ -216,8 +243,8 @@ public abstract class Argument<T> {
 		return times;
 	}
 	
-	public String getHelpMessage() {
-		return helpMessage;
+	public String getHelpMessage(Locale locale) {
+		return helpMessages != null ? helpMessages.getOrDefault(locale, helpMessage) : helpMessage;
 	}
 	
 	public boolean hiddenFromShortHelp() {
@@ -230,8 +257,8 @@ public abstract class Argument<T> {
 		return replaceable;
 	}
 	
-	void performAction(ArgsNamespace arguments) {
-		action.accept(arguments);
+	void performAction(ArgsNamespace arguments, T value) {
+		action.accept(arguments, value);
 	}
 	
 	

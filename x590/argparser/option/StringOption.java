@@ -1,4 +1,4 @@
-package argparser.option;
+package x590.argparser.option;
 
 public class StringOption extends Option<String> {
 	

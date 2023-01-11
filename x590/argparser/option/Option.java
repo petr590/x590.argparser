@@ -1,7 +1,7 @@
-package argparser.option;
+package x590.argparser.option;
 
-import argparser.Argument;
-import argparser.Times;
+import x590.argparser.Argument;
+import x590.argparser.Times;
 
 public abstract class Option<T> extends Argument<T> {
 	

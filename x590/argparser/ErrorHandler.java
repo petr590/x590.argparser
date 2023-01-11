@@ -1,4 +1,4 @@
-package argparser;
+package x590.argparser;
 
 import java.util.function.Supplier;
 

@@ -1,9 +1,9 @@
-package argparser.option;
+package x590.argparser.option;
 
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import argparser.ArgumentParseException;
+import x590.argparser.ArgumentParseException;
 
 public abstract class NumberOption<T extends Number> extends Option<T> {
 	

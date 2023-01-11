@@ -1,6 +1,6 @@
-package argparser.option;
+package x590.argparser.option;
 
-import argparser.ArgumentParseException;
+import x590.argparser.ArgumentParseException;
 
 public class FloatOption extends NumberOption<Float> {
 	
