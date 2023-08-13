@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>x590</groupId>
-    <artifactId>arg-parser</artifactId>
+    <artifactId>ArgParser</artifactId>
     <version>1.0.2</version>
 
     <properties>
