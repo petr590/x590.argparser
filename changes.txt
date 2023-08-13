@@ -1,2 +1,1 @@
-The src folder has been added to the commit (it is more convenient to build the project this way).
-Added README.md and README-ru.md
+Project transition to Maven

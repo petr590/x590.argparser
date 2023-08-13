@@ -166,15 +166,27 @@ public class StandartArgParser implements ArgParser {
 		return this;
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public ArgsNamespace parse(String... args) throws ArgumentParseException {
+		return parseImpl(args);
+	}
+	
+	// T - подставной тип, нужен для того, чтобы компилятор проверял правильность кода.
+	// А на самом деле каждый аргумент имеет свой тип, просто мы работаем со всеми типами как с одним.
+	private <T> ArgsNamespace parseImpl(String... args) throws ArgumentParseException {
 		
 		ArgsNamespace namespace = new ArgsNamespace(optionalArguments, positionalArguments);
-		var namespaceMap = namespace.map;
 		
-		Iterator<Argument<?>> positionalIter = positionalArguments.values().iterator();
-		Argument<?> positionalArgument = positionalIter.hasNext() ? positionalIter.next() : null;
+		@SuppressWarnings("unchecked")
+		var namespaceMap = (Map<String, Entry<Argument<T>, List<T>>>)(Map<String, ?>)namespace.map;
+		
+		@SuppressWarnings("unchecked")
+		Map<String, Argument<T>>
+				positionalArguments = (Map<String, Argument<T>>)(Map<String, ?>)this.positionalArguments,
+				optionalArguments = (Map<String, Argument<T>>)(Map<String, ?>)this.optionalArguments;
+		
+		Iterator<Argument<T>> positionalIter = positionalArguments.values().iterator();
+		Argument<T> positionalArgument = positionalIter.hasNext() ? positionalIter.next() : null;
 		
 		boolean skipOption = false;
 		
@@ -192,18 +204,18 @@ public class StandartArgParser implements ArgParser {
 				String name  = nameAndValue[0];
 				String value = nameAndValue.length >= 2 ? nameAndValue[1] : null;
 				
-				Optional<Entry<String, Argument<?>>> foundArg = optionalArguments.entrySet()
+				Optional<Entry<String, Argument<T>>> foundArg = optionalArguments.entrySet()
 						.stream().filter(entry -> entry.getKey().equals(name)).findAny();
 				
 				if(foundArg.isPresent()) {
-					Argument<?> argument = foundArg.get().getValue();
+					Argument<T> argument = foundArg.get().getValue();
 					
 					if(!argument.canParse()) {
 						errorHandler.handle(programName, "Cannot parse argument '" + name + "'");
 						continue;
 					}
 					
-					Object parsedValue;
+					T parsedValue;
 					
 					if(value == null) {
 						if(argument.isValueRequired()) {
@@ -221,7 +233,7 @@ public class StandartArgParser implements ArgParser {
 						argument.parsedTimes++;
 						
 						if(argument.isMultiargs()) {
-							positionalIter = new OptionalArgumentIterator(positionalIter, argument);
+							positionalIter = new OptionalArgumentIterator<>(positionalIter, argument);
 							positionalArgument = argument;
 						}
 					
@@ -229,8 +241,8 @@ public class StandartArgParser implements ArgParser {
 						parsedValue = tryParseValue(argument, value);
 					}
 					
-					((List<Object>)namespaceMap.get(name).getValue()).add(parsedValue);
-					((Argument<Object>)argument).performAction(namespace, parsedValue);
+					namespaceMap.get(name).getValue().add(parsedValue);
+					argument.performAction(namespace, parsedValue);
 				
 				} else {
 					errorHandler.handle(programName, "Unknown option '" + arg + "'", () -> new UnknownOptionException(arg));
@@ -247,17 +259,20 @@ public class StandartArgParser implements ArgParser {
 					positionalArgument = positionalIter.next();
 				}
 				
-				((List<Object>)namespaceMap.get(positionalArgument.name).getValue()).add(positionalArgument.parse(arg));
+				var values = namespaceMap.get(positionalArgument.name).getValue();
+				values.add(positionalArgument.parse(arg));
+				
 				positionalArgument.parsedTimes++;
 				
 				skipOption = false;
 			}
 		}
 		
-		List<Argument<?>> requiredArguments = new ArrayList<>();
+		List<Argument<T>> requiredArguments = new ArrayList<>();
 		
-		for(Entry<Argument<?>, List<?>> entry : namespaceMap.values().stream().collect(Collectors.toSet())) {
-			Argument<?> argument = entry.getKey();
+		for(Entry<Argument<T>, List<T>> entry : namespaceMap.values().stream().collect(Collectors.toSet())) {
+			
+			Argument<T> argument = entry.getKey();
 			
 			if(!argument.parsed()) {
 				requiredArguments.add(argument);
@@ -265,9 +280,9 @@ public class StandartArgParser implements ArgParser {
 			}
 			
 			if(argument.times.isRequired()) {
-				List<?> values = entry.getValue();
+				List<T> values = entry.getValue();
 				if(values.isEmpty()) {
-					((List<Object>)values).add(argument.getDefaultValue());
+					values.add(argument.getDefaultValue());
 				}
 			}
 		}
@@ -283,7 +298,7 @@ public class StandartArgParser implements ArgParser {
 	}
 	
 	
-	private Object tryParseValue(Argument<?> argument, String value) {
+	private <T> T tryParseValue(Argument<T> argument, String value) {
 		try {
 			return argument.parse(value);
 		} catch(ArgumentParseException ex) {
@@ -294,13 +309,13 @@ public class StandartArgParser implements ArgParser {
 	
 	
 	
-	private static class OptionalArgumentIterator implements Iterator<Argument<?>> {
+	private static class OptionalArgumentIterator<T> implements Iterator<Argument<T>> {
 		
-		private final Iterator<Argument<?>> iterator;
-		private Argument<?> argument;
+		private final Iterator<Argument<T>> iterator;
+		private Argument<T> argument;
 		
-		public OptionalArgumentIterator(Iterator<Argument<?>> iterator, Argument<?> argument) {
-			this.iterator = iterator instanceof OptionalArgumentIterator multiargIterator ? multiargIterator.iterator : iterator;
+		public OptionalArgumentIterator(Iterator<Argument<T>> iterator, Argument<T> argument) {
+			this.iterator = iterator instanceof OptionalArgumentIterator<T> multiargIterator ? multiargIterator.iterator : iterator;
 			this.argument = argument;
 		}
 		
@@ -313,7 +328,7 @@ public class StandartArgParser implements ArgParser {
 		}
 		
 		@Override
-		public Argument<?> next() {
+		public Argument<T> next() {
 			if(argument == null)
 				return iterator.next();
 			

@@ -8,9 +8,9 @@ import java.util.HashMap;
 
 public class ArgsNamespace {
 
-	final HashMap<String, Entry<Argument<?>, List<?>>> map = new HashMap<>();
-	
-	
+	final Map<String, Entry<Argument<?>, List<?>>> map = new HashMap<>();
+
+
 	private void addToMap(Map<String, Argument<?>> arguments) {
 		for(Argument<?> argument : arguments.values()) {
 			Map.Entry<Argument<?>, List<?>> entry = Map.entry(argument, new ArrayList<>());
@@ -26,18 +26,25 @@ public class ArgsNamespace {
 	}
 
 
-	@SuppressWarnings("unchecked")
 	protected <T> Entry<Argument<T>, List<T>> find(String name) {
-		Entry<Argument<?>, List<?>> entry = map.get(name);
+
+		@SuppressWarnings("unchecked")
+		var entry = (Entry<Argument<T>, List<T>>)(Entry<?, ?>)map.get(name);
 
 		if(entry == null)
-			throw new IllegalStateException("Argument '" + name + "' not found");
+			throw new IllegalArgumentException("Argument '" + name + "' not found");
 
-		return (Entry<Argument<T>, List<T>>)(Entry<?, ?>)entry;
+		return entry;
 	}
 
 
 	public <T> void set(String name, T value) {
+		List<T> values = this.<T>find(name).getValue();
+		values.clear();
+		values.add(value);
+	}
+
+	public <T> void add(String name, T value) {
 		this.<T>find(name).getValue().add(value);
 	}
 

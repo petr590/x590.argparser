@@ -159,7 +159,7 @@ public abstract class Argument<T> {
 		if(helpMessages == null)
 			helpMessages = new HashMap<>();
 			
-		this.helpMessages.put(locale, helpMessage);
+		helpMessages.put(locale, helpMessage);
 		return this;
 	}
 	
@@ -196,13 +196,39 @@ public abstract class Argument<T> {
 	}
 	
 	
+	@Deprecated
+	public Argument<T> action(Runnable action) {
+		this.action = (namespace, value) -> action.run();
+		return this;
+	}
+	
+	@Deprecated
 	public Argument<T> action(Consumer<ArgsNamespace> action) {
 		this.action = (namespace, value) -> action.accept(namespace);
 		return this;
 	}
 	
-	/** Функция, которая выполняется при парсинге аргумента */
+	@Deprecated
 	public Argument<T> action(BiConsumer<ArgsNamespace, T> action) {
+		this.action = action;
+		return this;
+	}
+	
+	
+	/** Функция, которая выполняется при парсинге аргумента */
+	public Argument<T> onParse(Runnable action) {
+		this.action = (namespace, value) -> action.run();
+		return this;
+	}
+	
+	/** Функция, которая выполняется при парсинге аргумента */
+	public Argument<T> onParse(Consumer<T> action) {
+		this.action = (namespace, value) -> action.accept(value);
+		return this;
+	}
+	
+	/** Функция, которая выполняется при парсинге аргумента */
+	public Argument<T> onParse(BiConsumer<ArgsNamespace, T> action) {
 		this.action = action;
 		return this;
 	}
@@ -243,7 +269,7 @@ public abstract class Argument<T> {
 		return times;
 	}
 	
-	public String getHelpMessage(Locale locale) {
+	public @Nullable String getHelpMessage(Locale locale) {
 		return helpMessages != null ? helpMessages.getOrDefault(locale, helpMessage) : helpMessage;
 	}
 	
@@ -269,9 +295,9 @@ public abstract class Argument<T> {
 		T parsedValue = parser.apply(value);
 		
 		for(Function<T, String> condition : conditions) {
-			String result = condition.apply(parsedValue);
-			if(result != null) {
-				throw new ArgumentParseException(result);
+			String exceptionMessage = condition.apply(parsedValue);
+			if(exceptionMessage != null) {
+				throw new ArgumentParseException(exceptionMessage);
 			}
 		}
 		
@@ -291,7 +317,7 @@ public abstract class Argument<T> {
 	protected abstract String valueToString();
 	
 	protected String toHelpString() {
-		return names.stream().collect(Collectors.joining(", ")) + valueToString();
+		return names.stream().collect(Collectors.joining(", ", "", valueToString()));
 	}
 	
 	@Override
