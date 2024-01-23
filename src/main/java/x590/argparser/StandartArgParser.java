@@ -1,5 +1,7 @@
 package x590.argparser;
 
+import org.jetbrains.annotations.Nullable;
+
 import static x590.argparser.Argument.PREFIX;
 
 import java.util.ArrayList;
@@ -13,8 +15,6 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import x590.util.annotation.Nullable;
 
 /**
  * Стандартный парсер. Изначально содержит флаги --help

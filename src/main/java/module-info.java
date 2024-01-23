@@ -1,5 +1,5 @@
 module x590.argparser {
-	requires x590.util;
+	requires org.jetbrains.annotations;
 	
 	exports x590.argparser;
 	exports x590.argparser.option;
