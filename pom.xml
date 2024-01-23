@@ -7,14 +7,6 @@
     <groupId>x590</groupId>
     <artifactId>x590.argparser</artifactId>
     <version>1.0.2</version>
-    <packaging>jar</packaging>
-
-    <distributionManagement>
-        <repository>
-            <id>x590.argparser</id>
-            <url>https://github.com/petr590/ArgParser</url>
-        </repository>
-    </distributionManagement>
 
     <properties>
         <maven.compiler.source>19</maven.compiler.source>
